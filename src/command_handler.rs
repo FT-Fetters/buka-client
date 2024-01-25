@@ -47,6 +47,16 @@ impl CommandHandler {
                 println!("- {}", ele);
             }
         } else if show_type == "bucket" {
+            if cmd_len < 3 {
+                println!("Need repository name");
+                println!("Trye like this: show bucket [repo]");
+                return;
+            }
+            let rep_name = &cmd[2];
+            let bucket_vec = self.req_sender.show_bucket(rep_name.to_string());
+            for ele in bucket_vec {
+                println!("- {}", ele); 
+            }
         } else if show_type == "box" {
         } else {
             println!("Unknown show type");
