@@ -1,7 +1,7 @@
 use ansi_term::Color;
 use reqwest::{self, Client};
 use serde::{Deserialize, Serialize};
-use std::error::Error;
+use std::{error::Error, result};
 
 #[derive(Debug)]
 pub struct RequestSender {
@@ -134,5 +134,50 @@ impl RequestSender {
             let result: ShowResponse = serde_json::from_str(&response.text().await?)?;
             Ok(result)
         }
+    }
+
+    pub fn create_repo(&self, repo: String) {
+        let runtime: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
+        let result: Result<String, Box<dyn Error>> = runtime.block_on(self.send_create_repo(repo));
+
+        match result {
+
+            Ok(msg) => {
+                if msg == "ok" {
+                    println!("Ok");
+                }else {
+                    println!("{}", msg);
+                }
+            }
+            Err(e) => {
+                println!("{}: {}", Color::Red.paint("Connect exception"), e);
+            }
+            
+        }
+
+    }
+
+    async fn send_create_repo(&self, repo: String) -> Result<String, Box<dyn Error>>{
+        let req_url = format!(
+            "http://{}:{}/create/repo?auth={}",
+            self.ip, self.port, self.key
+        );
+        #[derive(Serialize)]
+        struct CreateRepoBody{
+            name: String
+        }
+        let req: CreateRepoBody = CreateRepoBody {name : repo};
+
+        let json_data = serde_json::to_string(&req).expect("Fail to serialize");
+
+        let response = self.client.post(req_url).body(json_data).send().await?;
+
+        if !response.status().is_success() {
+            println!("Create repository fail, code: {}", response.status());
+        }
+
+        let resp_json: Response = serde_json::from_str(&response.text().await?)?;
+
+        Ok(resp_json.msg)
     }
 }
