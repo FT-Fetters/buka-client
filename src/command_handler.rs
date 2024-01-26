@@ -31,6 +31,8 @@ impl CommandHandler {
             self.handle_bucket_put(cmd);
         } else if cmd[0] == "create" {
             self.handle_create(cmd);
+        } else if cmd[0] == "del" {
+            self.handle_del(cmd);
         } else if cmd[0] == "exit" {
             exit(-1);
         } else {
@@ -119,4 +121,31 @@ impl CommandHandler {
     }
 
     fn handle_create_bucket(&self, cmd: Vec<String>) {}
+
+    fn handle_del(&self, cmd: Vec<String>) {
+        let cmd_len = cmd.len();
+        if cmd_len < 2 {
+            println!("Wrong del command usage");
+            println!("- del repo [name]");
+            println!("- del bucket [repo] [name]");
+            return;
+        }
+        let create_type = cmd[1].to_string();
+        if create_type == "repo" {
+            self.handle_del_repo(cmd);
+        } else if create_type == "bucket" {
+        } else {
+            println!("Wrong create type, should be repo or bucket");
+        }
+    }
+
+    fn handle_del_repo(&self, cmd: Vec<String>) {
+        let cmd_len = cmd.len();
+        if cmd_len < 3 {
+            println!("Need repository name");
+            return;
+        }
+        let repo_name = cmd[2].to_string();
+        self.req_sender.del_repo(repo_name);
+    }
 }

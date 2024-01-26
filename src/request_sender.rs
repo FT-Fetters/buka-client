@@ -1,7 +1,7 @@
 use ansi_term::Color;
 use reqwest::{self, Client};
 use serde::{Deserialize, Serialize};
-use std::{error::Error, result};
+use std::error::Error;
 
 #[derive(Debug)]
 pub struct RequestSender {
@@ -141,39 +141,75 @@ impl RequestSender {
         let result: Result<String, Box<dyn Error>> = runtime.block_on(self.send_create_repo(repo));
 
         match result {
-
             Ok(msg) => {
                 if msg == "ok" {
                     println!("Ok");
-                }else {
+                } else {
                     println!("{}", msg);
                 }
             }
             Err(e) => {
                 println!("{}: {}", Color::Red.paint("Connect exception"), e);
             }
-            
         }
-
     }
 
-    async fn send_create_repo(&self, repo: String) -> Result<String, Box<dyn Error>>{
+    async fn send_create_repo(&self, repo: String) -> Result<String, Box<dyn Error>> {
         let req_url = format!(
             "http://{}:{}/create/repo?auth={}",
             self.ip, self.port, self.key
         );
         #[derive(Serialize)]
-        struct CreateRepoBody{
-            name: String
+        struct CreateRepoBody {
+            name: String,
         }
-        let req: CreateRepoBody = CreateRepoBody {name : repo};
+        let req: CreateRepoBody = CreateRepoBody { name: repo };
 
-        let json_data = serde_json::to_string(&req).expect("Fail to serialize");
+        let json_data: String = serde_json::to_string(&req).expect("Fail to serialize");
 
-        let response = self.client.post(req_url).body(json_data).send().await?;
+        let response: reqwest::Response = self.client.post(req_url).body(json_data).send().await?;
 
         if !response.status().is_success() {
             println!("Create repository fail, code: {}", response.status());
+        }
+
+        let resp_json: Response = serde_json::from_str(&response.text().await?)?;
+
+        Ok(resp_json.msg)
+    }
+
+    pub fn del_repo(&self, repo: String) {
+        let runtime: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
+        let result: Result<String, Box<dyn Error>> = runtime.block_on(self.send_del_repo(repo));
+
+        match result {
+            Ok(msg) => {
+                println!("{}", msg);
+            }
+            Err(e) => {
+                println!("{}: {}", Color::Red.paint("Connect exception"), e);
+            }
+        }
+    }
+
+    async fn send_del_repo(&self, repo: String) -> Result<String, Box<dyn Error>> {
+        let req_url = format!(
+            "http://{}:{}/del/repo?auth={}",
+            self.ip, self.port, self.key
+        );
+
+        #[derive(Serialize)]
+        struct DelRepoBody {
+            name: String,
+        }
+        let req: DelRepoBody = DelRepoBody { name: repo };
+
+        let json_data: String = serde_json::to_string(&req).expect("Fail to serialize");
+
+        let response: reqwest::Response = self.client.post(req_url).body(json_data).send().await?;
+
+        if !response.status().is_success() {
+            println!("Delete repository fail, code: {}", response.status());
         }
 
         let resp_json: Response = serde_json::from_str(&response.text().await?)?;
